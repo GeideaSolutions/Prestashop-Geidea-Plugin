@@ -2,7 +2,7 @@
 
 * Contributors: kanti-kiran
 * Version: 2.0.0
-* Tags: credit card, geidea, Apple Pay, payment, payment for WordPress, payment for woocommerce, payment request, woocommerce
+* Tags: credit card, geidea, Apple Pay, payment, payment for WordPress, payment for prestashop, payment request, prestashop
 * Requires at least: 8.0.2
 * Tested up to: 8.0.2
 * Requires PHP: 8.2
