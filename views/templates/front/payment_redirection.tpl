@@ -1,49 +1,63 @@
 <div class="text-xs-center">
-    <h3 id="label">{l s='Redirecting to Geidea ...' mod='geideapay'}</h3>
+     <h3 id="label">{l s='Redirecting to Geidea ...' mod='geideapay'}</h3>
 </div>
 
-<script src="https://www.merchant.geidea.net/hpp/geideapay.min.js"></script>
+<script src="https://www.merchant.geidea.net/hpp/geideaCheckout.min.js"></script>
+
+{assign var='baseUrl' value=Context::getContext()->shop->getBaseURL(true)}
+<script src="{$baseUrl nofilter}modules/geideapay/views/js/script.js"></script>
 
 <script type="text/javascript">
 
+let chargeRequest = { 
+  amount : '{$paymentObject['amount']}', 
+  currency : '{$paymentObject['currency']}',
+  callbackUrl : '{$paymentObject['callbackUrl']}',
+  merchantReferenceId : '{$paymentObject['merchantReferenceId']}',
+  merchantKey : '{$paymentObject['merchantKey']}',
+  initiatedBy : 'Internet',
+  name : 'PrestaShop',
+  pluginVersion : '1.1.1',
+  type : 'PrestaShop E-Commerce Platform',
+  IntegrationType : 'Plugin',
+  partnerId : 'Mimocodes',
+  email:'{$paymentObject['email']}',
+  showEmail: '{$paymentObject['showEmail']}' === "1",
+  addressEnabled : '{$paymentObject['addressEnabled']}' === "1",
+  billingAddress : '{$paymentObject['billingAddress']}',
+  shippingAddress : '{$paymentObject['shippingAddress']}',
+  showPhone: '{$paymentObject['phoneEnabled']}' === "1",
+  receiptEnabled : '{$paymentObject['receiptEnabled']}' === "1",
+  phoneNumber : '{$paymentObject['phoneNumber']}',
+  headerColor : '{$paymentObject['headerColor']}',
+  hideLogoEnabled : '{$paymentObject['hideLogoEnabled']}' === "1",
+  hppProfile : '{$paymentObject['hppProfile']}', 
+  merchantLogo : '{$paymentObject['merchantLogo']}',
+  uploadDir : '{$paymentObject['uploadDir']}',
+  returnUrl: '{$paymentObject['returnUrl']}',
+  cancelUrl: '{$paymentObject['cancelUrl']}',
+}
 
-function successCallBack(data) {ldelim}
-    console.log('handle successful callback as desired, data', data);
-    const parseResult = new DOMParser().parseFromString('{$paymentObject['returnUrl']}', "text/html");
-    const returnUrl = parseResult.documentElement.textContent;
-    document.location.href = returnUrl;
-{rdelim}
+window.paymentObject = {
+    returnUrl: '{$paymentObject['returnUrl']}',
+    cancelUrl: '{$paymentObject['cancelUrl']}',
+  };
 
-function failureCallBack(data) {ldelim}
-    console.log('handle failure callback as desired, data', data);
-    document.location.href = '{$paymentObject['cancelUrl']}';
-{rdelim}
+const xhr = new XMLHttpRequest();
+xhr.open('POST', "{$baseUrl}modules/geideapay/views/templates/front/payment_configuration.php");
+xhr.setRequestHeader('Content-Type', 'application/json');
+xhr.onload = () => {
+  if (xhr.status === 200) {
+    const responseBody = JSON.parse(xhr.responseText);
+    startV2HPP(responseBody);
+  } else {
+    console.error('Error:', xhr.statusText);
+  }
+};
+xhr.send(JSON.stringify(chargeRequest));
 
-let chargeRequest = {ldelim} {rdelim};
-chargeRequest.amount = '{$paymentObject['amount']}';
-chargeRequest.currency = '{$paymentObject['currency']}';
-chargeRequest.callbackUrl = '{$paymentObject['callbackUrl']}';
-chargeRequest.merchantReferenceId = '{$paymentObject['merchantReferenceId']}';
-chargeRequest.language = '{$paymentObject['language']}';
-
-chargeRequest.initiatedBy = 'Internet';
-chargeRequest.name = 'PrestaShop';
-chargeRequest.version = '{ _PS_VERSION_ }';
-chargeRequest.pluginVersion = '1.1.1';
-chargeRequest.type = 'PrestaShop E-Commerce Platform';
-chargeRequest.IntegrationType = 'Plugin';
-chargeRequest.partnerId = 'Mimocodes';
-
-let merchantKey = '{$paymentObject['merchantKey']}';
-let onSuccess = successCallBack;
-let onError = failureCallBack;
-let onCancel = failureCallBack;
-const payment = new GeideaApi(merchantKey, onSuccess, onError, onCancel);
-payment.configurePayment(chargeRequest);
-payment.startPayment();
-
-setTimeout(function() {ldelim}
-    document.getElementById("label").style.visibility = 'hidden';
-{rdelim}, 1000); // <-- time in milliseconds
+setTimeout(function() {
+  document.getElementById("label").style.visibility = 'hidden';
+}, 1000); // <-- time in milliseconds
 
 </script>
