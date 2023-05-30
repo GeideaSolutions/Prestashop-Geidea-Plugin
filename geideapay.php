@@ -5,8 +5,8 @@
  *
  * This file is the declaration of the module.
  *
-*  @author Mimocodes
-*  @copyright  2022 MimoCodes
+ *  @author Mimocodes
+ *  @copyright  2022 MimoCodes
  */
 if (!defined('_PS_VERSION_')) {
   exit;
@@ -126,9 +126,9 @@ class GeideaPay extends PaymentModule
     $newOption = new PrestaShop\PrestaShop\Core\Payment\PaymentOption;
     $newOption->setModuleName($this->displayName)
       ->setCallToActionText(Configuration::get('GEIDEA_PAY_TITLE'))
-      ->setLogo(_MODULE_DIR_.'geideapay/geidea-logo.png')
+      ->setLogo(_MODULE_DIR_ . 'geideapay/geidea-logo.png')
       ->setAction($formAction);
-      //->setForm($paymentForm);
+    //->setForm($paymentForm);
 
     $payment_options = array(
       $newOption
@@ -176,6 +176,14 @@ class GeideaPay extends PaymentModule
     Configuration::updateValue('LIVE_PUBLIC_KEY', '');
     Configuration::updateValue('GEIDEA_PAY_ACTIVE', true);
     Configuration::updateValue('GEIDEA_PAY_SANDBOX', true);
+    Configuration::updateValue('GEIDEA_PAY_ENABLE_EMAIL', true);
+    Configuration::updateValue('GEIDEA_PAY_ENABLE_ADDRESS', true);
+    Configuration::updateValue('GEIDEA_PAY_ENABLE_PHONE', true);
+    Configuration::updateValue('GEIDEA_PAY_ENABLE_RECEIPT', true);
+    Configuration::updateValue('GEIDEA_PAY_HEADER_COLOR', '');
+    Configuration::updateValue('GEIDEA_PAY_HIDE_LOGO', true);
+    Configuration::updateValue('GEIDEA_PAY_HPP_PROFILE', 'Simple');
+    Configuration::updateValue('GEIDEA_PAY_IMAGE', true);
   }
   public function preUnInstall()
   {
@@ -186,6 +194,14 @@ class GeideaPay extends PaymentModule
     Configuration::deleteByName('LIVE_PUBLIC_KEY');
     Configuration::deleteByName('GEIDEA_PAY_ACTIVE');
     Configuration::deleteByName('GEIDEA_PAY_SANDBOX');
+    Configuration::deleteByName('GEIDEA_PAY_ENABLE_EMAIL');
+    Configuration::updateValue('GEIDEA_PAY_ENABLE_ADDRESS');
+    Configuration::updateValue('GEIDEA_PAY_ENABLE_PHONE');
+    Configuration::updateValue('GEIDEA_PAY_ENABLE_RECEIPT');
+    Configuration::updateValue('GEIDEA_PAY_HEADER_COLOR');
+    Configuration::updateValue('GEIDEA_PAY_HIDE_LOGO');
+    Configuration::updateValue('GEIDEA_PAY_HPP_PROFILE');
+    Configuration::updateValue('GEIDEA_PAY_IMAGE');
   }
   public function renderForm()
   {
@@ -219,6 +235,14 @@ class GeideaPay extends PaymentModule
       'SANDBOX_PUBLIC_KEY' => Tools::getValue('SANDBOX_PUBLIC_KEY', Configuration::get('SANDBOX_PUBLIC_KEY', '')),
       'LIVE_PUBLIC_KEY' => Tools::getValue('LIVE_PUBLIC_KEY', Configuration::get('LIVE_PUBLIC_KEY', '')),
       'GEIDEA_PAY_SANDBOX' => Tools::getValue('GEIDEA_PAY_SANDBOX', Configuration::get('GEIDEA_PAY_SANDBOX', true)),
+      'GEIDEA_PAY_ENABLE_EMAIL' => Tools::getValue('GEIDEA_PAY_ENABLE_EMAIL', Configuration::get('GEIDEA_PAY_ENABLE_EMAIL', true)),
+      'GEIDEA_PAY_ENABLE_ADDRESS' => Tools::getValue('GEIDEA_PAY_ENABLE_ADDRESS', Configuration::get('GEIDEA_PAY_ENABLE_ADDRESS', true)),
+      'GEIDEA_PAY_ENABLE_PHONE' => Tools::getValue('GEIDEA_PAY_ENABLE_PHONE', Configuration::get('GEIDEA_PAY_ENABLE_PHONE', true)),
+      'GEIDEA_PAY_ENABLE_RECEIPT' => Tools::getValue('GEIDEA_PAY_ENABLE_RECEIPT', Configuration::get('GEIDEA_PAY_ENABLE_RECEIPT', true)),
+      'GEIDEA_PAY_HEADER_COLOR' => Tools::getValue('GEIDEA_PAY_HEADER_COLOR', Configuration::get('GEIDEA_PAY_HEADER_COLOR', '')),
+      'GEIDEA_PAY_HIDE_LOGO' => Tools::getValue('GEIDEA_PAY_HIDE_LOGO', Configuration::get('GEIDEA_PAY_HIDE_LOGO', true)),
+      'GEIDEA_PAY_HPP_PROFILE' => Tools::getValue('GEIDEA_PAY_HPP_PROFILE', Configuration::get('GEIDEA_PAY_HPP_PROFILE', 'Simple')),
+      'GEIDEA_PAY_IMAGE' => Tools::getValue('GEIDEA_PAY_IMAGE', Configuration::get('GEIDEA_PAY_IMAGE', '')),
     );
   }
   public function getConfigForm()
@@ -272,9 +296,128 @@ class GeideaPay extends PaymentModule
             )
           ),
           array(
+            'type' => 'switch',
+            'label' => $this->l('Enable Receipt'),
+            'name' => 'GEIDEA_PAY_ENABLE_RECEIPT',
+            'values' => array(
+              array(
+                'id' => 'active_on',
+                'value' => true,
+                'label' => $this->l('Receipt Enabled')
+              ),
+              array(
+                'id' => 'active_off',
+                'value' => false,
+                'label' => $this->l('Receipt Disabled')
+              )
+            )
+          ),
+          array(
+            'type' => 'switch',
+            'label' => $this->l('Enable Email'),
+            'name' => 'GEIDEA_PAY_ENABLE_EMAIL',
+            'values' => array(
+              array(
+                'id' => 'active_on',
+                'value' => true,
+                'label' => $this->l('Email Enabled')
+              ),
+              array(
+                'id' => 'active_off',
+                'value' => false,
+                'label' => $this->l('Email Disabled')
+              )
+            )
+          ),
+          array(
+            'type' => 'switch',
+            'label' => $this->l('Enable Phone Number'),
+            'name' => 'GEIDEA_PAY_ENABLE_PHONE',
+            'values' => array(
+              array(
+                'id' => 'active_on',
+                'value' => true,
+                'label' => $this->l('PhoneNumber Enabled')
+              ),
+              array(
+                'id' => 'active_off',
+                'value' => false,
+                'label' => $this->l('PhoneNumber Disabled')
+              )
+            )
+          ),
+          array(
+            'type' => 'switch',
+            'label' => $this->l('Enable Address'),
+            'name' => 'GEIDEA_PAY_ENABLE_ADDRESS',
+            'values' => array(
+              array(
+                'id' => 'active_on',
+                'value' => true,
+                'label' => $this->l('Address Enabled')
+              ),
+              array(
+                'id' => 'active_off',
+                'value' => false,
+                'label' => $this->l('Address Disabled')
+              )
+            )
+          ),
+          array(
+            'type' => 'switch',
+            'label' => $this->l('Hide Geidea Logo'),
+            'name' => 'GEIDEA_PAY_HIDE_LOGO',
+            'values' => array(
+              array(
+                'id' => 'active_on',
+                'value' => true,
+                'label' => $this->l('HideLogo Enabled')
+              ),
+              array(
+                'id' => 'active_off',
+                'value' => false,
+                'label' => $this->l('HideLogo Disabled')
+              )
+            )
+          ),
+          array(
+            'type' => 'select',
+            'label' => $this->l('Hosted Payment Page Style'),
+            'name' => 'GEIDEA_PAY_HPP_PROFILE',
+            'options' => array(
+              'query' => array(
+                array(
+                  'id_option' => 'Simple',
+                  'name' => 'Simple',
+                  'selected' => true
+                ),
+                array(
+                  'id_option' => 'Compressed',
+                  'name' => 'Compressed'
+                )
+              ),
+              'id' => 'id_option',
+              'name' => 'name'
+            )
+          ),
+          array(
             'col'  => 8,
             'type' => 'html',
             'name' => '<hr>',
+          ),
+          array(
+            'type' => 'text',
+            'label' => $this->l('Header Color'),
+            'name' => 'GEIDEA_PAY_HEADER_COLOR',
+            'default' => '',
+          ),
+          array(
+            'type' => 'file',
+            'label' => $this->l('Upload Image'),
+            'desc' => $this->l('Allowed file types: jpg, jpeg, png, svg'),
+            'name' => 'GEIDEA_PAY_IMAGE',
+            'display_image' => true,
+            'allowed_file_types' => array('image/jpeg', 'image/png', 'image/svg+xml', 'image/jpg')
           ),
           array(
             'type' => 'text',
@@ -313,13 +456,56 @@ class GeideaPay extends PaymentModule
     );
   }
 
-  protected function postProcess()
-  {
-    $form_values = $this->getConfigFieldsValues();
 
-    foreach (array_keys($form_values) as $key) {
-      $value = Tools::getValue($key);
-      Configuration::updateValue($key, trim($value));
+  protected function postProcess()
+{
+  $form_values = $this->getConfigFieldsValues();
+
+  foreach (array_keys($form_values) as $key) {
+    $value = Tools::getValue($key);
+    Configuration::updateValue($key, trim($value));
+  }
+
+  // Define the upload directory
+  $uploadDir =  _PS_MODULE_DIR_ . 'geideapay/image/';
+  if (!file_exists($uploadDir)) {
+    mkdir($uploadDir, 0777, true);
+  }
+
+  if (!empty($_FILES['GEIDEA_PAY_IMAGE']['name'])) {
+    $file = $_FILES['GEIDEA_PAY_IMAGE'];
+    $fileName = basename($file['name']);
+    $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+    $allowedExtensions = array('jpg', 'jpeg', 'png', 'svg');
+
+    if (!in_array($fileExtension, $allowedExtensions)) {
+      die('Error: Invalid file type. Allowed types: ' . implode(', ', $allowedExtensions));
+    }
+
+    // Move the file to the upload directory
+    $uploadFile = $uploadDir . $fileName;
+    if (!move_uploaded_file($file['tmp_name'], $uploadFile)) {
+      die('Error: Failed to move uploaded file.');
     }
   }
+
+  $files = array_diff(scandir($uploadDir), array('.', '..'));
+
+  $allowedExtensions = array('jpg', 'jpeg', 'png', 'svg');
+  $imageFiles = array_filter($files, function ($file) use ($allowedExtensions) {
+    $extension = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+    return in_array($extension, $allowedExtensions);
+  });
+
+  $sortedImageFiles = array_values($imageFiles); 
+  usort($sortedImageFiles, function ($a, $b) use ($uploadDir) {
+    $aModifiedTime = filemtime($uploadDir . $a);
+    $bModifiedTime = filemtime($uploadDir . $b);
+    return $bModifiedTime - $aModifiedTime;
+  });
+
+  $lastUploadedImageRelativePath = !empty($sortedImageFiles) ? $sortedImageFiles[0] : null;
+  Configuration::updateValue('GEIDEA_PAY_IMAGE', $lastUploadedImageRelativePath);
+}
+
 }

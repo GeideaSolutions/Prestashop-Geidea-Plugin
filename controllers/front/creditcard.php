@@ -30,6 +30,7 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
   public $currentTemplate = 'module:geideapay/views/templates/front/errorpage.tpl';
   public $page_name = 'checkout';
   protected $_transaction;
+  protected $merchantApiPassword;
 
   public function initHeader()
   {
@@ -69,25 +70,82 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
     $sandbox = Configuration::get('GEIDEA_PAY_SANDBOX', false);
     $publicKey = $sandbox ? Configuration::get('SANDBOX_PUBLIC_KEY', '') : Configuration::get('LIVE_PUBLIC_KEY', '');
     $publicKey = trim($publicKey);
+
+    $merchantApiPassword = $sandbox ? Configuration::get('SANDBOX_MERCHANT_API_PASSWORD', '') : Configuration::get('LIVE_MERCHANT_API_PASSWORD', '');
+    $this->merchantApiPassword = $sandbox ? Configuration::get('SANDBOX_MERCHANT_API_PASSWORD', '') : Configuration::get('LIVE_MERCHANT_API_PASSWORD', '');
+     if (session_status() == PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        // Set the merchantApiPassword in session
+     $_SESSION['merchantApiPassword'] = $this->merchantApiPassword;
+
+        // Include payment_configuration.php
+     $this->includePaymentConfiguration();
+
+    
+    $emailEnabled = Configuration::get('GEIDEA_PAY_ENABLE_EMAIL', false);
+    $receiptEnabled = Configuration::get('GEIDEA_PAY_ENABLE_RECEIPT', false);
+    $phoneEnabled = Configuration::get('GEIDEA_PAY_ENABLE_PHONE', false);
+    $addressEnabled = Configuration::get('GEIDEA_PAY_ENABLE_ADDRESS', false);
+    $headerColor = Configuration::get('GEIDEA_PAY_HEADER_COLOR', '');
+    $hideLogoEnabled = Configuration::get('GEIDEA_PAY_HIDE_LOGO', false);
+    $hppProfile = Configuration::get('GEIDEA_PAY_HPP_PROFILE', 'Simple');
+    //for merchantlogo 
+    $baseUrl = Context::getContext()->shop->getBaseURL(true);
+    $uploadDir = $baseUrl . 'modules/geideapay/image/';
+    $merchantLogoUrl = Configuration::get('GEIDEA_PAY_IMAGE');
+    $merchantLogo =  $uploadDir . $merchantLogoUrl;
+
     if (isset($publicKey) === true && $publicKey === '') {
       // It's empty
       $this->setErrorTemplate($this->module->l('This payment method is not available.'));
       return;
     }
 
-    $customer      = new Customer((int)($cart->id_customer));
-    $amount        = $cart->getOrderTotal(true, 3);
-    $orderPrice         = (float)$cart->getOrderTotal(true, Cart::BOTH);
+    $customer = new Customer((int)($cart->id_customer));
+    $billingEmail = $customer->email;
+
+    // Get the current context
+    $context = Context::getContext();
+    // Get the customer's billing address
+    $billingAddress = new Address($context->cart->id_address_invoice);
+    $billing_address_formatted = array(
+      'first_name' => $billingAddress->firstname,
+      'last_name' => $billingAddress->lastname,
+      'billing_address' => $billingAddress->address1,
+      'city' => $billingAddress->city,
+      'postcode' => $billingAddress->postcode,
+      'phone' => $billingAddress->phone,
+    );
+
+    // Get the customer's shipping address
+    $shippingAddress = new Address($context->cart->id_address_delivery);
+    $shipping_address_formatted = array(
+      'first_name' => $shippingAddress->firstname,
+      'last_name' => $shippingAddress->lastname,
+      'billing_address' => $shippingAddress->address1,
+      'city' => $shippingAddress->city,
+      'postcode' => $shippingAddress->postcode,
+      'phone' => $shippingAddress->phone,
+    );
+
+    $billing_Address = json_encode($billing_address_formatted);
+    $shipping_Address = json_encode($shipping_address_formatted);
+    $phoneNumber = $billing_address_formatted['phone'];
+
+    $amount = $cart->getOrderTotal(true, 3);
+    $orderPrice  = (float)$cart->getOrderTotal(true, Cart::BOTH);
 
     $module_name = $this->module->displayName;
     $payment_status = Configuration::get('PS_OS_PREPARATION');
     $currency_id = (int) Context::getContext()->currency->id;
 
+
     $products = $cart->getProducts();
     $product_ids = array();
     $product_qts = array();
-    foreach ($products as $product) 
-    {
+    foreach ($products as $product) {
       $product_ids[] = (int)$product['id_product'];
       $product_qts[] = $product['cart_quantity'];
       $product_attributes[] = $product['id_product_attribute'];
@@ -112,9 +170,9 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
 
     $orderId = (int)Order::getIdByCartId((int)$cart->id);
 
-    $returnUrl = 'index.php?controller=order-confirmation&id_cart='.$cart->id.'&id_module=' .$this->module->id.'&id_order='.$orderId.'&key='.$customer->secure_key;
+    $returnUrl = 'index.php?controller=order-confirmation&id_cart=' . $cart->id . '&id_module=' . $this->module->id . '&id_order=' . $orderId . '&key=' . $customer->secure_key;
 
-    $paymentObject = $this->getPaymentObject($product_ids, $product_qts, $product_attributes, $orderId, $orderPrice, $publicKey, $returnUrl);
+    $paymentObject = $this->getPaymentObject($product_ids, $product_qts, $product_attributes, $orderId, $orderPrice, $publicKey, $returnUrl, $emailEnabled, $billingEmail, $merchantApiPassword, $addressEnabled, $billing_Address, $shipping_Address, $phoneNumber, $phoneEnabled, $receiptEnabled, $headerColor, $hideLogoEnabled, $hppProfile, $merchantLogo, $uploadDir);
 
     PrestaShopLogger::addLog(
       'GeideaPay::initContent::Token request data: ' . var_export($paymentObject, true),
@@ -129,6 +187,12 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
     Tools::redirect($redirectionURL);
   }
 
+  protected function includePaymentConfiguration()
+  {
+    $baseUrl = Context::getContext()->shop->getBaseURL(true);
+    $paymentConfigUrl = $baseUrl . 'module:geideapay/views/templates/front/payment_configuration.php';
+    include($paymentConfigUrl);
+  }
   /**
    * @param      $processingReturnCode
    * @param bool $setTemplate
@@ -152,19 +216,23 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
   }
 
 
-  public function getPaymentObject($product_ids, $product_qts, $product_attributes, $orderId, $orderPrice, $publicKey, $returnUrl)
+  public function getPaymentObject($product_ids, $product_qts, $product_attributes, $orderId, $orderPrice, $publicKey, $returnUrl, $emailEnabled, $billingEmail, $merchantApiPassword, $addressEnabled, $billing_Address, $shipping_Address, $phoneNumber, $phoneEnabled, $receiptEnabled, $headerColor, $hideLogoEnabled, $hppProfile, $merchantLogo, $uploadDir)
   {
     global $cookie;
     $currency = new CurrencyCore($cookie->id_currency);
     $currency_iso_code = $currency->iso_code;
 
-    $cancelUrl = $this->context->link->getModuleLink($this->module->name, 'ordercancelled', 
-    [
-      'id_order' => $orderId, 
-      'product_ids' => implode (", ", $product_ids),
-      'product_qts' => implode (", ", $product_qts),
-      'product_attributes' => implode (", ", $product_attributes),
-    ], $this->ssl);
+    $cancelUrl = $this->context->link->getModuleLink(
+      $this->module->name,
+      'ordercancelled',
+      [
+        'id_order' => $orderId,
+        'product_ids' => implode(", ", $product_ids),
+        'product_qts' => implode(", ", $product_qts),
+        'product_attributes' => implode(", ", $product_attributes),
+      ],
+      $this->ssl
+    );
     $callbackUrl = $this->context->link->getModuleLink($this->module->name, 'ordercompleted', array(), $this->ssl);
     //Order info
     $price = round((float)$orderPrice, 2);
@@ -177,9 +245,21 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
       "merchantReferenceId" => $orderId,
       'returnUrl' => $returnUrl,
       'callbackUrl' => $callbackUrl,
-      'cancelUrl' => $cancelUrl,
+       'cancelUrl' => $cancelUrl,
       'merchantKey' => $publicKey,
-      'language' => $lang,
+      'showEmail' => $emailEnabled,
+      'email' => $billingEmail,
+      'addressEnabled' => $addressEnabled,
+      'billingAddress' => $billing_Address,
+      'shippingAddress' => $shipping_Address,
+      'phoneNumber' => $phoneNumber,
+      'phoneEnabled' => $phoneEnabled,
+      'receiptEnabled' => $receiptEnabled,
+      'headerColor' => $headerColor,
+      'hideLogoEnabled' => $hideLogoEnabled,
+      'hppProfile' => $hppProfile,
+      'merchantLogo' => $merchantLogo,
+      'uploadDir' => $uploadDir,
     ];
 
     return $paymentObject;
@@ -187,7 +267,6 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
 
   public function getPaymentUrlTest()
   {
-
     $merchantID = "f7bdf1db-f67e-409b-8fe7-f7ecf9634f70";
     $merchantReferenceId = "123";
     //Order info
