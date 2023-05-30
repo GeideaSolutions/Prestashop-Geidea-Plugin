@@ -1,16 +1,16 @@
 # Geidea Online Payments for PrestaShop
 
-Contributors: kanti-kiran
-Version: 2.0.0
-Tags: credit card, geidea, Apple Pay, payment, payment for WordPress, payment for woocommerce, payment request, woocommerce
-Requires at least: 8.0.2
-Tested up to: 8.0.2
-Requires PHP: 8.2
-Stable version: 2.0.0
-License: GPLv3
-License URI: https://www.gnu.org/licenses/gpl-3.0.html
+* Contributors: kanti-kiran
+* Version: 2.0.0
+* Tags: credit card, geidea, Apple Pay, payment, payment for WordPress, payment for woocommerce, payment request, woocommerce
+* Requires at least: 8.0.2
+* Tested up to: 8.0.2
+* Requires PHP: 8.2
+* Stable version: 2.0.0
+* License: GPLv3
+* License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
-Requirementsdd Geidea module to your online store with No Code and start accepting online payments seamlessly with Geidea Payment Gateway.
+Add Geidea module to your online store with No Code and start accepting online payments seamlessly with Geidea Payment Gateway.
 
 # Description 
 
