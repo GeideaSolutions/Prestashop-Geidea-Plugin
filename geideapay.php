@@ -28,7 +28,7 @@ class GeideaPay extends PaymentModule
   {
     $this->name                   = 'geideapay';
     $this->tab                    = 'payments_gateways';
-    $this->version                = '1.1.1';
+    $this->version                = '2.0.0';
     $this->author                 = 'Geidea Solutions';
     $this->controllers            = array('payment', 'validation');
     $this->currencies             = true;
@@ -174,16 +174,16 @@ class GeideaPay extends PaymentModule
     Configuration::updateValue('LIVE_MERCHANT_API_PASSWORD', '');
     Configuration::updateValue('SANDBOX_PUBLIC_KEY', '');
     Configuration::updateValue('LIVE_PUBLIC_KEY', '');
-    Configuration::updateValue('GEIDEA_PAY_ACTIVE', true);
-    Configuration::updateValue('GEIDEA_PAY_SANDBOX', true);
-    Configuration::updateValue('GEIDEA_PAY_ENABLE_EMAIL', true);
-    Configuration::updateValue('GEIDEA_PAY_ENABLE_ADDRESS', true);
-    Configuration::updateValue('GEIDEA_PAY_ENABLE_PHONE', true);
-    Configuration::updateValue('GEIDEA_PAY_ENABLE_RECEIPT', true);
+    Configuration::updateValue('GEIDEA_PAY_ACTIVE', false);
+    Configuration::updateValue('GEIDEA_PAY_SANDBOX', false);
+    Configuration::updateValue('GEIDEA_PAY_ENABLE_EMAIL', false);
+    Configuration::updateValue('GEIDEA_PAY_ENABLE_ADDRESS', false);
+    Configuration::updateValue('GEIDEA_PAY_ENABLE_PHONE', false);
+    Configuration::updateValue('GEIDEA_PAY_ENABLE_RECEIPT', false);
     Configuration::updateValue('GEIDEA_PAY_HEADER_COLOR', '');
-    Configuration::updateValue('GEIDEA_PAY_HIDE_LOGO', true);
+    Configuration::updateValue('GEIDEA_PAY_HIDE_LOGO', false);
     Configuration::updateValue('GEIDEA_PAY_HPP_PROFILE', 'Simple');
-    Configuration::updateValue('GEIDEA_PAY_IMAGE', true);
+    Configuration::updateValue('GEIDEA_PAY_IMAGE', false);
   }
   public function preUnInstall()
   {
@@ -195,13 +195,13 @@ class GeideaPay extends PaymentModule
     Configuration::deleteByName('GEIDEA_PAY_ACTIVE');
     Configuration::deleteByName('GEIDEA_PAY_SANDBOX');
     Configuration::deleteByName('GEIDEA_PAY_ENABLE_EMAIL');
-    Configuration::updateValue('GEIDEA_PAY_ENABLE_ADDRESS');
-    Configuration::updateValue('GEIDEA_PAY_ENABLE_PHONE');
-    Configuration::updateValue('GEIDEA_PAY_ENABLE_RECEIPT');
-    Configuration::updateValue('GEIDEA_PAY_HEADER_COLOR');
-    Configuration::updateValue('GEIDEA_PAY_HIDE_LOGO');
-    Configuration::updateValue('GEIDEA_PAY_HPP_PROFILE');
-    Configuration::updateValue('GEIDEA_PAY_IMAGE');
+    Configuration::deleteByName('GEIDEA_PAY_ENABLE_ADDRESS');
+    Configuration::deleteByName('GEIDEA_PAY_ENABLE_PHONE');
+    Configuration::deleteByName('GEIDEA_PAY_ENABLE_RECEIPT');
+    Configuration::deleteByName('GEIDEA_PAY_HEADER_COLOR');
+    Configuration::deleteByName('GEIDEA_PAY_HIDE_LOGO');
+    Configuration::deleteByName('GEIDEA_PAY_HPP_PROFILE');
+    Configuration::deleteByName('GEIDEA_PAY_IMAGE');
   }
   public function renderForm()
   {

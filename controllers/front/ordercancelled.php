@@ -39,7 +39,7 @@ class GeideaPayOrderCancelledModuleFrontController extends ModuleFrontController
             'GeideaPay::products ids in cancel order: ' . var_export($product_ids, true),
             1,
             null,
-            'GeideaPay Module',
+            'GeideaPay',
             (int)$this->context->cart->id,
             true
           );

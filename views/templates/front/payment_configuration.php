@@ -21,6 +21,13 @@ function sendGiRequest($gatewayUrl, $merchantKey, $password, $values, $method = 
     return $response;
 }
 
+function generateSignature($merchantPublicKey, $orderAmount, $orderCurrency, $orderMerchantReferenceId, $apiPassword, $timestamp)
+{
+    $amountStr = number_format($orderAmount, 2, '.', '');
+    $data = "{$merchantPublicKey}{$amountStr}{$orderCurrency}{$orderMerchantReferenceId}{$timestamp}";
+    $hash = hash_hmac('sha256', $data, $apiPassword, true);
+    return base64_encode($hash);
+}
 
 header('Content-Type: application/json');
 $data = json_decode(file_get_contents('php://input'), true);
@@ -32,14 +39,21 @@ if (session_status() == PHP_SESSION_NONE) {
 
 // Retrieve the merchantApiPassword from session
 $merchantApiPassword = isset($_SESSION['merchantApiPassword']) ? $_SESSION['merchantApiPassword'] : '';
+$timestamp =  date("n/d/Y g:i:s A");
+$signature = generateSignature($data['merchantKey'], $data['amount'],  $data['currency'], ($data['merchantReferenceId'] === '') ? null : $data['merchantReferenceId'], $merchantApiPassword, $timestamp);
 
 $iframeConfiguration = array(
     'merchantPublicKey' => $data['merchantKey'],
     'apiPassword' =>  $merchantApiPassword,
     'callbackUrl' => $data['callbackUrl'],
-    'amount' =>  $data['amount'],
+    'amount' => number_format($data['amount'], 2, '.', ''),
     'currency' => $data['currency'],
+    'language' => 'en',
+    'timestamp' => $timestamp,
     'merchantReferenceId' => ($data['merchantReferenceId'] === '') ? null : $data['merchantReferenceId'],
+    'paymentIntentId' => null,
+    'paymentOperation' => 'Pay',
+    'cardOnFile' => false,
     'initiatedBy' => 'Internet',
     'customer' => array(
         'create' => false,
@@ -62,44 +76,45 @@ $iframeConfiguration = array(
         'styles' => array(
             'hideGeideaLogo' => $data['hideLogoEnabled'],
             'headerColor' => ($data['headerColor'] === '') ? null : $data['headerColor'],
-           
-            'hppProfile' => $data['hppProfile'],
-          ),
-          ),
-          'order' => array(
-          'integrationType' => $data['IntegrationType'],
-          ),
-          'platform' => array(
-          'name' => $data['name'],
-          'pluginVersion' => $data['pluginVersion'],
-          'partnerId' => $data['partnerId'],
-          ),
-          );
-          
-          $iframeConfigurationJson = $iframeConfiguration;          
-          $response = sendGiRequest(
-          'https://api.merchant.geidea.net/payment-intent/api/v1/direct/session',
-          $data['merchantKey'],
-          $merchantApiPassword,
-          $iframeConfigurationJson
-          );
-          
-          $responseBody = array();
-          
-          if ($response === false) {
-          // Error occurred while making the request
-          $responseBody['error'] = 'Failed to connect to the gateway.';
-          } else {
-          $responseArray = json_decode($response, true);
-          if ($responseArray && isset($responseArray['session'])) {
-            $responseBody = $responseArray;
-            $responseBody['returnUrl'] = $data['returnUrl'];
-            $responseBody['cancelUrl'] = $data['cancelUrl'];
-        } else {
-            // Error occurred in the response
-            $responseBody['error'] = 'Invalid response from the gateway.';
-        }
-      }
 
-      echo json_encode($response);
-      ?>        
+            'hppProfile' => $data['hppProfile'],
+        ),
+        'uiMode' => 'modal',
+    ),
+    'order' => array(
+        'integrationType' => $data['IntegrationType'],
+    ),
+    'platform' => array(
+        'name' => $data['name'],
+        'pluginVersion' => $data['pluginVersion'],
+        'partnerId' => $data['partnerId'],
+    ),
+    'signature' => $signature,
+);
+
+$iframeConfigurationJson = $iframeConfiguration;
+$response = sendGiRequest(
+    'https://api.merchant.geidea.net/payment-intent/api/v2/direct/session',
+    $data['merchantKey'],
+    $merchantApiPassword,
+    $iframeConfigurationJson
+);
+
+$responseBody = array();
+
+if ($response === false) {
+    // Error occurred while making the request
+    $responseBody['error'] = 'Failed to connect to the gateway.';
+} else {
+    $responseArray = json_decode($response, true);
+    if ($responseArray && isset($responseArray['session'])) {
+        $responseBody = $responseArray;
+        $responseBody['returnUrl'] = $data['returnUrl'];
+        $responseBody['cancelUrl'] = $data['cancelUrl'];
+    } else {
+        // Error occurred in the response
+        $responseBody['error'] = 'Invalid response from the gateway.';
+    }
+}
+
+echo json_encode($response);

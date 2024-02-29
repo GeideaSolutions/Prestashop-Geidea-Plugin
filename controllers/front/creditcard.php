@@ -178,7 +178,7 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
       'GeideaPay::initContent::Token request data: ' . var_export($paymentObject, true),
       1,
       null,
-      'GeideaPay Module',
+      'GeideaPay',
       (int)$this->context->cart->id,
       true
     );

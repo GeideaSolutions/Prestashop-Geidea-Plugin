@@ -48,7 +48,8 @@ class GeideaPayOrderCompletedModuleFrontController extends ModuleFrontController
             if($publicKey == $merchantPublicKey)
             {
                 $recieved_signature = $data['signature'];
-                $sig_string = $merchantPublicKey.$amount.$currency.$orderId.$status.$merchantReferenceId;
+                $timeStamp = $data['timeStamp'];
+                $sig_string = $merchantPublicKey.$amount.$currency.$orderId.$status.$merchantReferenceId.$timeStamp;
                 $logger->logDebug('\n\nsig_string:- ' . json_encode($sig_string));
                 $logger->logDebug('\n\nmerchantApiPassword:- ' . json_encode($merchantApiPassword));
 
