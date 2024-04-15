@@ -75,7 +75,7 @@ class GeideaPayOrderCompletedModuleFrontController extends ModuleFrontController
                         $logger->logDebug('\n\npaymentStatus:- ' . json_encode($paymentStatus));
                         //return
                         if ($paymentStatus == 'PAID' || $paymentStatus == 'SUCCESS') {
-                            $this->updateOrderStatus($logger, $merchantReferenceId, $orderId, Configuration::get('PS_OS_PAYMENT'), $processing_result);
+                            $this->updateOrderStatus($logger, $merchantReferenceId, $orderId, Configuration::get('GEIDEA_ACCEPTED_PAYMENT'), $processing_result);
                             //FAIL CLOSE
                         }elseif ($paymentStatus == 'CANCELLED' || $paymentStatus == 'EXPIRED') {
                             $this->updateOrderStatus($logger, $merchantReferenceId, $orderId, Configuration::get('PS_OS_CANCELED'), $processing_result);

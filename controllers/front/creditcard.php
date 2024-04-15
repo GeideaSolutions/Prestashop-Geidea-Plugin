@@ -73,17 +73,18 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
 
     $merchantApiPassword = $sandbox ? Configuration::get('SANDBOX_MERCHANT_API_PASSWORD', '') : Configuration::get('LIVE_MERCHANT_API_PASSWORD', '');
     $this->merchantApiPassword = $sandbox ? Configuration::get('SANDBOX_MERCHANT_API_PASSWORD', '') : Configuration::get('LIVE_MERCHANT_API_PASSWORD', '');
-     if (session_status() == PHP_SESSION_NONE) {
-            session_start();
-        }
+    if (session_status() == PHP_SESSION_NONE) {
+      session_start();
+    }
 
-        // Set the merchantApiPassword in session
-     $_SESSION['merchantApiPassword'] = $this->merchantApiPassword;
+    // Set the merchantApiPassword in session
+    $_SESSION['merchantApiPassword'] = $this->merchantApiPassword;
+    $_SESSION['geideaEnvironment'] = Configuration::get('GEIDEA_ENVIRONMENT');
 
-        // Include payment_configuration.php
-     $this->includePaymentConfiguration();
+    // Include payment_configuration.php
+    $this->includePaymentConfiguration();
 
-    
+
     $emailEnabled = Configuration::get('GEIDEA_PAY_ENABLE_EMAIL', false);
     $receiptEnabled = Configuration::get('GEIDEA_PAY_ENABLE_RECEIPT', false);
     $phoneEnabled = Configuration::get('GEIDEA_PAY_ENABLE_PHONE', false);
@@ -138,7 +139,7 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
     $orderPrice  = (float)$cart->getOrderTotal(true, Cart::BOTH);
 
     $module_name = $this->module->displayName;
-    $payment_status = Configuration::get('PS_OS_PREPARATION');
+    $payment_status = Configuration::get('GEIDEA_AWAITING_PAYMENT');
     $currency_id = (int) Context::getContext()->currency->id;
 
 
@@ -245,7 +246,7 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
       "merchantReferenceId" => $orderId,
       'returnUrl' => $returnUrl,
       'callbackUrl' => $callbackUrl,
-       'cancelUrl' => $cancelUrl,
+      'cancelUrl' => $cancelUrl,
       'merchantKey' => $publicKey,
       'showEmail' => $emailEnabled,
       'email' => $billingEmail,

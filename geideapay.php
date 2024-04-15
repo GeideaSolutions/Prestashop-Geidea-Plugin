@@ -28,7 +28,7 @@ class GeideaPay extends PaymentModule
   {
     $this->name                   = 'geideapay';
     $this->tab                    = 'payments_gateways';
-    $this->version                = '2.0.0';
+    $this->version                = '2.1.0';
     $this->author                 = 'Geidea Solutions';
     $this->controllers            = array('payment', 'validation');
     $this->currencies             = true;
@@ -184,7 +184,51 @@ class GeideaPay extends PaymentModule
     Configuration::updateValue('GEIDEA_PAY_HIDE_LOGO', false);
     Configuration::updateValue('GEIDEA_PAY_HPP_PROFILE', 'Simple');
     Configuration::updateValue('GEIDEA_PAY_IMAGE', false);
+    Configuration::updateValue('GEIDEA_AWAITING_PAYMENT', $this->createCustomPaymentStatus());
+    Configuration::updateValue('GEIDEA_ACCEPTED_PAYMENT', Configuration::get('PS_OS_PAYMENT'));
+    Configuration::updateValue('GEIDEA_ENVIRONMENT', 'EGY-PROD');
   }
+  private function createCustomPaymentStatus()
+  {
+    $status_name = 'Awaiting payment';
+    $status_color = '#34209E';
+    $orderStatusId = $this->getOrderStatusIdByName($status_name);
+    if ($orderStatusId) {
+      return $orderStatusId;
+    }
+
+    $languages = Language::getLanguages();
+    $statuses = array();
+
+    foreach ($languages as $lang) {
+      $statuses[$lang['id_lang']] = $status_name;
+    }
+
+    $orderState = new OrderState();
+    $orderState->name = $statuses;
+    $orderState->send_email = false;
+    $orderState->color = $status_color;
+    $orderState->unremovable = true;
+    $orderState->hidden = false;
+    $orderState->logable = true;
+
+    if (!$orderState->add()) {
+      return Configuration::get('PS_OS_PREPARATION');
+    }
+
+    return (int)$orderState->id;
+  }
+  function getOrderStatusIdByName($statusName)
+  {
+    $orderStatuses = OrderState::getOrderStates($this->context->language->id);
+    foreach ($orderStatuses as $orderStatus) {
+      if ($orderStatus['name'] === $statusName) {
+        return $orderStatus['id_order_state'];
+      }
+    }
+    return false;
+  }
+
   public function preUnInstall()
   {
     Configuration::deleteByName('GEIDEA_PAY_TITLE');
@@ -202,6 +246,9 @@ class GeideaPay extends PaymentModule
     Configuration::deleteByName('GEIDEA_PAY_HIDE_LOGO');
     Configuration::deleteByName('GEIDEA_PAY_HPP_PROFILE');
     Configuration::deleteByName('GEIDEA_PAY_IMAGE');
+    Configuration::deleteByName('GEIDEA_AWAITING_PAYMENT');
+    Configuration::deleteByName('GEIDEA_ACCEPTED_PAYMENT');
+    Configuration::deleteByName('GEIDEA_ENVIRONMENT');
   }
   public function renderForm()
   {
@@ -243,10 +290,59 @@ class GeideaPay extends PaymentModule
       'GEIDEA_PAY_HIDE_LOGO' => Tools::getValue('GEIDEA_PAY_HIDE_LOGO', Configuration::get('GEIDEA_PAY_HIDE_LOGO', true)),
       'GEIDEA_PAY_HPP_PROFILE' => Tools::getValue('GEIDEA_PAY_HPP_PROFILE', Configuration::get('GEIDEA_PAY_HPP_PROFILE', 'Simple')),
       'GEIDEA_PAY_IMAGE' => Tools::getValue('GEIDEA_PAY_IMAGE', Configuration::get('GEIDEA_PAY_IMAGE', '')),
+      'GEIDEA_AWAITING_PAYMENT' => Tools::getValue('GEIDEA_AWAITING_PAYMENT', Configuration::get('GEIDEA_AWAITING_PAYMENT')),
+      'GEIDEA_ACCEPTED_PAYMENT' => Tools::getValue('GEIDEA_ACCEPTED_PAYMENT', Configuration::get('GEIDEA_ACCEPTED_PAYMENT')),
+      'GEIDEA_ENVIRONMENT' => Tools::getValue('GEIDEA_ENVIRONMENT', Configuration::get('GEIDEA_ENVIRONMENT', 'EGY-PROD')),
     );
+  }
+  private function getAwaitingPaymentOrderStatuses()
+  {
+    $orderStatuses = OrderState::getOrderStates($this->context->language->id);
+    $statusesArray = array();
+
+    foreach ($orderStatuses as $status) {
+      if ($status['id_order_state'] === Configuration::get('GEIDEA_AWAITING_PAYMENT')) {
+        $statusesArray[] = array(
+          'id_option' => $status['id_order_state'],
+          'name' => $status['name'],
+          'selected' => true,
+        );
+      } else {
+        $statusesArray[] = array(
+          'id_option' => $status['id_order_state'],
+          'name' => $status['name'],
+        );
+      }
+    }
+
+    return $statusesArray;
+  }
+  private function getAcceptedPaymentOrderStatuses()
+  {
+    $orderStatuses = OrderState::getOrderStates($this->context->language->id);
+    $statusesArray = array();
+
+    foreach ($orderStatuses as $status) {
+      if ($status['id_order_state'] === Configuration::get('PS_OS_PAYMENT')) {
+        $statusesArray[] = array(
+          'id_option' => $status['id_order_state'],
+          'name' => $status['name'],
+          'selected' => true,
+        );
+      } else {
+        $statusesArray[] = array(
+          'id_option' => $status['id_order_state'],
+          'name' => $status['name'],
+        );
+      }
+    }
+
+    return $statusesArray;
   }
   public function getConfigForm()
   {
+    $awaitingPaymenteOrderStatus = $this->getAwaitingPaymentOrderStatuses();
+    $acceptedPaymentOrderStatus = $this->getAcceptedPaymentOrderStatuses();
     return array(
       'form' => array(
         'legend' => array(
@@ -271,6 +367,31 @@ class GeideaPay extends PaymentModule
                 'label' => $this->l('Disabled')
               )
             ),
+          ),
+          array(
+            'type' => 'select',
+            'label' => $this->l('Environment'),
+            'name' => 'GEIDEA_ENVIRONMENT',
+            'options' => array(
+              'query' => array(
+                array(
+                  'id_option' => 'EGY-PROD',
+                  'name' => 'EGY-PROD',
+                  'selected' => true
+                ),
+                array(
+                  'id_option' => 'KSA-PROD',
+                  'name' => 'KSA-PROD'
+                ),
+                array(
+                  'id_option' => 'UAE-PROD',
+                  'name' => 'UAE-PROD'
+                )
+              ),
+              'id' => 'id_option',
+              'name' => 'name'
+            ),
+            'required' => true
           ),
           array(
             'type' => 'text',
@@ -437,6 +558,28 @@ class GeideaPay extends PaymentModule
             'name' => '<hr>',
           ),
           array(
+            'type' => 'select',
+            'label' => $this->l('Order status while waiting for payment'),
+            'name' => 'GEIDEA_AWAITING_PAYMENT',
+            'options' => array(
+              'query' => $awaitingPaymenteOrderStatus,
+              'id' => 'id_option',
+              'name' => 'name'
+            ),
+            'required' => true
+          ),
+          array(
+            'type' => 'select',
+            'label' => $this->l('Order status after success payment'),
+            'name' => 'GEIDEA_ACCEPTED_PAYMENT',
+            'options' => array(
+              'query' => $acceptedPaymentOrderStatus,
+              'id' => 'id_option',
+              'name' => 'name'
+            ),
+            'required' => true
+          ),
+          array(
             'type' => 'text',
             'label' => $this->l('Production Merchant API Password'),
             'name' => 'LIVE_MERCHANT_API_PASSWORD',
@@ -458,54 +601,53 @@ class GeideaPay extends PaymentModule
 
 
   protected function postProcess()
-{
-  $form_values = $this->getConfigFieldsValues();
+  {
+    $form_values = $this->getConfigFieldsValues();
 
-  foreach (array_keys($form_values) as $key) {
-    $value = Tools::getValue($key);
-    Configuration::updateValue($key, trim($value));
-  }
+    foreach (array_keys($form_values) as $key) {
+      $value = Tools::getValue($key);
+      Configuration::updateValue($key, trim($value));
+    }
 
-  // Define the upload directory
-  $uploadDir =  _PS_MODULE_DIR_ . 'geideapay/image/';
-  if (!file_exists($uploadDir)) {
-    mkdir($uploadDir, 0777, true);
-  }
+    // Define the upload directory
+    $uploadDir =  _PS_MODULE_DIR_ . 'geideapay/image/';
+    if (!file_exists($uploadDir)) {
+      mkdir($uploadDir, 0777, true);
+    }
 
-  if (!empty($_FILES['GEIDEA_PAY_IMAGE']['name'])) {
-    $file = $_FILES['GEIDEA_PAY_IMAGE'];
-    $fileName = basename($file['name']);
-    $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+    if (!empty($_FILES['GEIDEA_PAY_IMAGE']['name'])) {
+      $file = $_FILES['GEIDEA_PAY_IMAGE'];
+      $fileName = basename($file['name']);
+      $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+      $allowedExtensions = array('jpg', 'jpeg', 'png', 'svg');
+
+      if (!in_array($fileExtension, $allowedExtensions)) {
+        die('Error: Invalid file type. Allowed types: ' . implode(', ', $allowedExtensions));
+      }
+
+      // Move the file to the upload directory
+      $uploadFile = $uploadDir . $fileName;
+      if (!move_uploaded_file($file['tmp_name'], $uploadFile)) {
+        die('Error: Failed to move uploaded file.');
+      }
+    }
+
+    $files = array_diff(scandir($uploadDir), array('.', '..'));
+
     $allowedExtensions = array('jpg', 'jpeg', 'png', 'svg');
+    $imageFiles = array_filter($files, function ($file) use ($allowedExtensions) {
+      $extension = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+      return in_array($extension, $allowedExtensions);
+    });
 
-    if (!in_array($fileExtension, $allowedExtensions)) {
-      die('Error: Invalid file type. Allowed types: ' . implode(', ', $allowedExtensions));
-    }
+    $sortedImageFiles = array_values($imageFiles);
+    usort($sortedImageFiles, function ($a, $b) use ($uploadDir) {
+      $aModifiedTime = filemtime($uploadDir . $a);
+      $bModifiedTime = filemtime($uploadDir . $b);
+      return $bModifiedTime - $aModifiedTime;
+    });
 
-    // Move the file to the upload directory
-    $uploadFile = $uploadDir . $fileName;
-    if (!move_uploaded_file($file['tmp_name'], $uploadFile)) {
-      die('Error: Failed to move uploaded file.');
-    }
+    $lastUploadedImageRelativePath = !empty($sortedImageFiles) ? $sortedImageFiles[0] : null;
+    Configuration::updateValue('GEIDEA_PAY_IMAGE', $lastUploadedImageRelativePath);
   }
-
-  $files = array_diff(scandir($uploadDir), array('.', '..'));
-
-  $allowedExtensions = array('jpg', 'jpeg', 'png', 'svg');
-  $imageFiles = array_filter($files, function ($file) use ($allowedExtensions) {
-    $extension = strtolower(pathinfo($file, PATHINFO_EXTENSION));
-    return in_array($extension, $allowedExtensions);
-  });
-
-  $sortedImageFiles = array_values($imageFiles); 
-  usort($sortedImageFiles, function ($a, $b) use ($uploadDir) {
-    $aModifiedTime = filemtime($uploadDir . $a);
-    $bModifiedTime = filemtime($uploadDir . $b);
-    return $bModifiedTime - $aModifiedTime;
-  });
-
-  $lastUploadedImageRelativePath = !empty($sortedImageFiles) ? $sortedImageFiles[0] : null;
-  Configuration::updateValue('GEIDEA_PAY_IMAGE', $lastUploadedImageRelativePath);
-}
-
 }

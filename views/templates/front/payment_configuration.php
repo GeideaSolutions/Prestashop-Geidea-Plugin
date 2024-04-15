@@ -39,6 +39,7 @@ if (session_status() == PHP_SESSION_NONE) {
 
 // Retrieve the merchantApiPassword from session
 $merchantApiPassword = isset($_SESSION['merchantApiPassword']) ? $_SESSION['merchantApiPassword'] : '';
+$geideaEnvironment = isset($_SESSION['geideaEnvironment']) ? $_SESSION['geideaEnvironment'] : '';
 $timestamp =  date("n/d/Y g:i:s A");
 $signature = generateSignature($data['merchantKey'], $data['amount'],  $data['currency'], ($data['merchantReferenceId'] === '') ? null : $data['merchantReferenceId'], $merchantApiPassword, $timestamp);
 
@@ -92,9 +93,16 @@ $iframeConfiguration = array(
     'signature' => $signature,
 );
 
+if ($geideaEnvironment === 'EGY-PROD') {
+    $createSessionUrl = 'https://api.merchant.geidea.net/payment-intent/api/v2/direct/session';
+} elseif ($geideaEnvironment === 'KSA-PROD') {
+    $createSessionUrl = 'https://api.ksamerchant.geidea.net/payment-intent/api/v2/direct/session';
+} elseif ($geideaEnvironment === 'UAE-PROD') {
+    $createSessionUrl = 'https://api.merchant.geidea.ae/payment-intent/api/v2/direct/session';
+}
 $iframeConfigurationJson = $iframeConfiguration;
 $response = sendGiRequest(
-    'https://api.merchant.geidea.net/payment-intent/api/v2/direct/session',
+    $createSessionUrl,
     $data['merchantKey'],
     $merchantApiPassword,
     $iframeConfigurationJson
