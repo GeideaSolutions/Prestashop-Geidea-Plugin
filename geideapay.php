@@ -20,7 +20,7 @@ class GeideaPay extends PaymentModule
   public $address;
 
   /**
-   * GeideaPay constructor.
+   * GeideaPay constructor
    *
    * Set the information about this module
    */
@@ -66,7 +66,7 @@ class GeideaPay extends PaymentModule
   }
   /**
    * Returns a string containing the HTML necessary to
-   * generate a configuration screen on the admin
+   * generate a configuration screen on the admin panel
    *
    * @return string
    */

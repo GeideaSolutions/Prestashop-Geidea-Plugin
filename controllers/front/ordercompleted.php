@@ -21,7 +21,7 @@ class GeideaPayOrderCompletedModuleFrontController extends ModuleFrontController
             die();
         }
 
-        $logger = new FileLogger(0); //0 == debug level, logDebug() won’t work without this.
+        $logger = new FileLogger(0); //0 == debug level, logDebug() won’t work without this
         $logger->setFilename(_PS_ROOT_DIR_ . '/geidea.log');
         $logger->logDebug('\n\ngeidea call back data is ' . json_encode($data));
 
