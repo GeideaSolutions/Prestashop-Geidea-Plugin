@@ -1,4 +1,4 @@
-# GeideaPay - Prestashop Geidea payment gateway module
+# GeideaPay - Prestashop Geidea Payment Gateway Module
 
 ## Installation
 
