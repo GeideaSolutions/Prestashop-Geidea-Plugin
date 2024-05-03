@@ -16,7 +16,9 @@ class GeideaPayOrderCompletedModuleFrontController extends ModuleFrontController
         $data = json_decode(file_get_contents('php://input'), true);
 
         if(empty($data)) {
-            return false;
+            echo json_encode("Invalid request!");
+            http_response_code(400);
+            die();
         }
 
         $logger = new FileLogger(0); //0 == debug level, logDebug() won’t work without this.
@@ -76,11 +78,20 @@ class GeideaPayOrderCompletedModuleFrontController extends ModuleFrontController
                         //return
                         if ($paymentStatus == 'PAID' || $paymentStatus == 'SUCCESS') {
                             $this->updateOrderStatus($logger, $merchantReferenceId, $orderId, Configuration::get('GEIDEA_ACCEPTED_PAYMENT'), $processing_result);
+                            echo json_encode("Order is completed!");
+                            http_response_code(200);
+                            die();
                             //FAIL CLOSE
                         }elseif ($paymentStatus == 'CANCELLED' || $paymentStatus == 'EXPIRED') {
                             $this->updateOrderStatus($logger, $merchantReferenceId, $orderId, Configuration::get('PS_OS_CANCELED'), $processing_result);
+                            echo json_encode("Payment Expired or Cancelled!");
+                            http_response_code(200);
+                            die();
                         } elseif ($paymentStatus == 'FAILED') {
                             $this->updateOrderStatus($logger, $merchantReferenceId, $orderId, Configuration::get('PS_OS_ERROR'), $processing_result);
+                            echo json_encode("Payment failed!");
+                            http_response_code(200);
+                            die();
                         }
                     }catch(Exception $e){
                         $params = array(
@@ -90,10 +101,23 @@ class GeideaPayOrderCompletedModuleFrontController extends ModuleFrontController
                         );
                         ob_clean();
                         print json_encode($params);
+                        http_response_code(404);
                         exit;
                     }
+                }else{
+                    echo json_encode("Invalid signature!");
+                    http_response_code(400);
+                    die();
                 }
+            }else{
+                echo json_encode("Invalid merchantPublicKey!");
+                http_response_code(400);
+                die();
             }
+        }else{
+            echo json_encode("Order is not defined properly!");
+            http_response_code(400);
+            die();
         }
     }
 
