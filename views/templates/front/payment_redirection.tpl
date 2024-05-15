@@ -7,7 +7,7 @@
 {elseif Configuration::get('GEIDEA_ENVIRONMENT') == 'KSA-PROD'}
     <script src="https://www.ksamerchant.geidea.net/hpp/geideaCheckout.min.js"></script>
 {elseif Configuration::get('GEIDEA_ENVIRONMENT') == 'UAE-PROD'}
-    <script src="https://www.merchant.geidea.ae/hpp/geideaCheckout.min.js"></script>
+    <script src="https://payments.geidea.ae/hpp/geideaCheckout.min.js"></script>
 {/if}
 
 {assign var='baseUrl' value=Context::getContext()->shop->getBaseURL(true)}
@@ -23,7 +23,7 @@ let chargeRequest = {
   merchantKey : '{$paymentObject['merchantKey']}',
   initiatedBy : 'Internet',
   name : 'PrestaShop',
-  pluginVersion : '3.0.1',
+  pluginVersion : '3.1.0',
   type : 'PrestaShop E-Commerce Platform',
   IntegrationType : 'Plugin',
   partnerId : 'Mimocodes',

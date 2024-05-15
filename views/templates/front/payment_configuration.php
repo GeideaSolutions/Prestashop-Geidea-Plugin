@@ -98,7 +98,7 @@ if ($geideaEnvironment === 'EGY-PROD') {
 } elseif ($geideaEnvironment === 'KSA-PROD') {
     $createSessionUrl = 'https://api.ksamerchant.geidea.net/payment-intent/api/v2/direct/session';
 } elseif ($geideaEnvironment === 'UAE-PROD') {
-    $createSessionUrl = 'https://api.merchant.geidea.ae/payment-intent/api/v2/direct/session';
+    $createSessionUrl = 'https://api.geidea.ae/payment-intent/api/v2/direct/session';
 }
 $iframeConfigurationJson = $iframeConfiguration;
 $response = sendGiRequest(
