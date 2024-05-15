@@ -2,8 +2,6 @@
 
 ## Installation
 
-1 - Clone the Prestashop plugin folder and rename it to 'geideapay'
-
-2 - Zip the 'geideapy' folder
+2 - Download the 'geideapy.zip' file from the Git repository
 
 3 - Upload it as a module to your Prestashop store
