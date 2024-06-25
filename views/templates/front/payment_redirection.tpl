@@ -23,7 +23,7 @@ let chargeRequest = {
   merchantKey : '{$paymentObject['merchantKey']}',
   initiatedBy : 'Internet',
   name : 'PrestaShop',
-  pluginVersion : '3.1.0',
+  pluginVersion : '3.2.0',
   type : 'PrestaShop E-Commerce Platform',
   IntegrationType : 'Plugin',
   partnerId : 'Mimocodes',
@@ -42,6 +42,9 @@ let chargeRequest = {
   uploadDir : '{$paymentObject['uploadDir']}',
   returnUrl: '{$paymentObject['returnUrl']}',
   cancelUrl: '{$paymentObject['cancelUrl']}',
+  timestamp : '{$paymentObject['timestamp']}', 
+  signature : '{$paymentObject['signature']}',
+  geideaSession : '{$paymentObject['geideaSession']}',
 }
 
 window.paymentObject = {

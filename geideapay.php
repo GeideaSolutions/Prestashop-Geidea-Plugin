@@ -28,7 +28,7 @@ class GeideaPay extends PaymentModule
   {
     $this->name                   = 'geideapay';
     $this->tab                    = 'payments_gateways';
-    $this->version                = '3.1.0';
+    $this->version                = '3.2.0';
     $this->author                 = 'Geidea Solutions';
     $this->controllers            = array('payment', 'validation');
     $this->currencies             = true;

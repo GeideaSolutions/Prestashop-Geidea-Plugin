@@ -72,7 +72,9 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
     $publicKey = trim($publicKey);
 
     $merchantApiPassword = $sandbox ? Configuration::get('SANDBOX_MERCHANT_API_PASSWORD', '') : Configuration::get('LIVE_MERCHANT_API_PASSWORD', '');
+    $merchantApiPassword = trim($merchantApiPassword);
     $this->merchantApiPassword = $sandbox ? Configuration::get('SANDBOX_MERCHANT_API_PASSWORD', '') : Configuration::get('LIVE_MERCHANT_API_PASSWORD', '');
+    $this->merchantApiPassword = trim($this->merchantApiPassword);
     if (session_status() == PHP_SESSION_NONE) {
       session_start();
     }
@@ -239,6 +241,13 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
     $price = round((float)$orderPrice, 2);
     // Language
     $lang = $this->context->language->iso_code;
+
+    $timestamp =  date("n/d/Y g:i:s A");
+    $signature = $this->generateSignature($publicKey, $price, $currency_iso_code, $orderId === '' ? null : $orderId, $merchantApiPassword, $timestamp);
+
+    $getGeideaSession = $this->createSession($publicKey, $merchantApiPassword, $callbackUrl, $price, $currency_iso_code, $timestamp, $orderId, $billingEmail, $phoneNumber, $billing_Address, $shipping_Address, $merchantLogo, $uploadDir, $addressEnabled, $emailEnabled, $phoneEnabled, $receiptEnabled, $hideLogoEnabled, $headerColor, $hppProfile, $signature);
+    $geideaSession =   urlencode($getGeideaSession);
+
     //building body
     $paymentObject = [
       "amount" => $price,
@@ -261,9 +270,110 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
       'hppProfile' => $hppProfile,
       'merchantLogo' => $merchantLogo,
       'uploadDir' => $uploadDir,
+      'timestamp' => $timestamp,
+      'signature' => $signature,
+      'geideaSession' => $geideaSession,
     ];
 
     return $paymentObject;
+  }
+
+  public function generateSignature($merchantPublicKey, $orderAmount, $orderCurrency, $orderMerchantReferenceId, $apiPassword, $timestamp)
+  {
+    $amountStr = number_format($orderAmount, 2, '.', '');
+    $data = "{$merchantPublicKey}{$amountStr}{$orderCurrency}{$orderMerchantReferenceId}{$timestamp}";
+    $hash = hash_hmac('sha256', $data, $apiPassword, true);
+    return base64_encode($hash);
+  }
+
+  public function createSession($publicKey, $merchantApiPassword, $callbackUrl, $price, $currency_iso_code, $timestamp, $orderId, $billingEmail, $phoneNumber, $billing_Address, $shipping_Address, $merchantLogo, $uploadDir, $addressEnabled, $emailEnabled, $phoneEnabled, $receiptEnabled, $hideLogoEnabled, $headerColor, $hppProfile, $signature)
+  {
+    $iframeConfiguration = array(
+      'merchantPublicKey' => $publicKey,
+      'apiPassword' =>  $merchantApiPassword,
+      'callbackUrl' => $callbackUrl,
+      'amount' => number_format($price, 2, '.', ''),
+      'currency' => $currency_iso_code,
+      'language' => 'en',
+      'timestamp' => $timestamp,
+      'merchantReferenceId' => ((string)$orderId === '') ? null : (string)$orderId,
+      'paymentIntentId' => null,
+      'paymentOperation' => 'Pay',
+      'cardOnFile' => false,
+      'initiatedBy' => 'Internet',
+      'customer' => array(
+        'create' => false,
+        'setDefaultMethod' => false,
+        'email' => ($billingEmail === '') ? null : $billingEmail,
+        'phoneNumber' => ($phoneNumber === '') ? null : $phoneNumber,
+        'address' => array(
+          'billing' => json_decode(str_replace('&quot;', '"', $billing_Address), true),
+          'shipping' => json_decode(str_replace('&quot;', '"',  $shipping_Address), true),
+        ),
+      ),
+      'appearance' => array(
+        'merchant' => array(
+          'logoUrl' => ($merchantLogo === $uploadDir) ? null : $merchantLogo,
+        ),
+        'showAddress' => $addressEnabled == '1' ? true : false,
+        'showEmail' => $emailEnabled == '1' ? true : false,
+        'showPhone' => $phoneEnabled == '1' ? true : false,
+        'receiptPage' => $receiptEnabled == '1' ? true : false,
+        'styles' => array(
+          'hideGeideaLogo' => $hideLogoEnabled == '1' ? true : false,
+          'headerColor' => ($headerColor === '') ? null : $headerColor,
+
+          'hppProfile' => $hppProfile,
+        ),
+        'uiMode' => 'modal',
+      ),
+      'order' => array(
+        'integrationType' => 'Plugin',
+      ),
+      'platform' => array(
+        'name' => 'Prestashop',
+        'pluginVersion' => '3.2.0',
+        'partnerId' => 'Mimocodes',
+      ),
+      'signature' => $signature,
+    );
+    $geideaEnvironment = Configuration::get('GEIDEA_ENVIRONMENT');
+    if ($geideaEnvironment === 'EGY-PROD') {
+      $createSessionUrl = 'https://api.merchant.geidea.net/payment-intent/api/v2/direct/session';
+    } elseif ($geideaEnvironment === 'KSA-PROD') {
+      $createSessionUrl = 'https://api.ksamerchant.geidea.net/payment-intent/api/v2/direct/session';
+    } elseif ($geideaEnvironment === 'UAE-PROD') {
+      $createSessionUrl = 'https://api.geidea.ae/payment-intent/api/v2/direct/session';
+    }
+    $iframeConfigurationJson = $iframeConfiguration;
+    $response = $this->sendGiRequest(
+      $createSessionUrl,
+      $publicKey,
+      $merchantApiPassword,
+      $iframeConfigurationJson
+    );
+    return $response;
+  }
+
+  public function sendGiRequest($gatewayUrl, $merchantKey, $password, $values, $method = 'POST')
+  {
+    $origString = $merchantKey . ":" . $password;
+    $authKey = base64_encode($origString);
+    $postParams = $values;
+
+    $headers = array(
+      'Authorization: Basic ' . $authKey,
+      'Content-Type: application/json',
+      'Accept: application/json',
+    );
+    $curl = curl_init($gatewayUrl);
+    curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $method);
+    curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
+    curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($postParams));
+    $response = curl_exec($curl);
+    curl_close($curl);
+    return $response;
   }
 
   public function getPaymentUrlTest()

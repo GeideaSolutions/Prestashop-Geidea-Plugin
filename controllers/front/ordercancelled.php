@@ -15,12 +15,18 @@ class GeideaPayOrderCancelledModuleFrontController extends ModuleFrontController
 
         $status = Configuration::get('PS_OS_CANCELED');
         $id_order =  $_GET['id_order'];
-        $order = new Order($id_order); 
-        $order->setCurrentState($status);
-        $order->update();
-        $history = new OrderHistory();
-        $history->id_order = (int)$order->id;
-        $history->changeIdOrderState($status, (int)($order->id));
+        $order = new Order($id_order);
+        $current_status = (string)$order->getCurrentState();
+        if ($current_status !=  (string)Configuration::get('PS_OS_CANCELED') && $current_status !=  (string)Configuration::get('GEIDEA_AWAITING_PAYMENT')) {
+            return;
+        }
+        if ($current_status ==  (string)Configuration::get('GEIDEA_AWAITING_PAYMENT')) {
+            $order->setCurrentState($status);
+            $order->update();
+            $history = new OrderHistory();
+            $history->id_order = (int)$order->id;
+            $history->changeIdOrderState($status, (int)($order->id));
+        }
 
         $cart = new Cart();
         $cart->id_currency = $this->context->currency->id;
@@ -28,12 +34,12 @@ class GeideaPayOrderCancelledModuleFrontController extends ModuleFrontController
         $cart->save();
         $this->context->cart = $cart;
 
-        $product_ids=$_GET['amp;product_ids']; // comma separated products id example : test.php?product_ids=1,2,3
-        $product_qts=$_GET['amp;product_qts'];
-        $product_attributes=$_GET['amp;product_attributes'];
-        $product_ids_array=explode(",",$product_ids);
-        $product_qts_array=explode(",",$product_qts);
-        $product_attributes_array=explode(",",$product_attributes);
+        $product_ids = $_GET['amp;product_ids']; // comma separated products id example : test.php?product_ids=1,2,3
+        $product_qts = $_GET['amp;product_qts'];
+        $product_attributes = $_GET['amp;product_attributes'];
+        $product_ids_array = explode(",", $product_ids);
+        $product_qts_array = explode(",", $product_qts);
+        $product_attributes_array = explode(",", $product_attributes);
 
         PrestaShopLogger::addLog(
             'GeideaPay::products ids in cancel order: ' . var_export($product_ids, true),
@@ -42,10 +48,10 @@ class GeideaPayOrderCancelledModuleFrontController extends ModuleFrontController
             'GeideaPay',
             (int)$this->context->cart->id,
             true
-          );
+        );
 
-        if(count($product_ids_array)>0){
-            for($i=0;$i<count($product_ids_array);$i++){
+        if (count($product_ids_array) > 0) {
+            for ($i = 0; $i < count($product_ids_array); $i++) {
                 $this->context->cart->updateQty($product_qts_array[$i], $product_ids_array[$i], $product_attributes_array[$i]);
             }
         }
@@ -53,6 +59,5 @@ class GeideaPayOrderCancelledModuleFrontController extends ModuleFrontController
     }
     public function postProcess()
     {
-
     }
 }
