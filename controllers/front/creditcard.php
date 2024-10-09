@@ -332,7 +332,7 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
       ),
       'platform' => array(
         'name' => 'Prestashop',
-        'pluginVersion' => '3.2.0',
+        'pluginVersion' => '3.2.1',
         'partnerId' => 'Mimocodes',
       ),
       'signature' => $signature,

@@ -96,8 +96,8 @@ class GeideaPayOrderCompletedModuleFrontController extends ModuleFrontController
                     } catch (Exception $e) {
                         $params = array(
                             'action' => 'fail',
-                            'err_code' => $e->getCode(),
-                            'err_msg' => $e->getMessage()
+                            'err_code' => "404",
+                            'err_msg' => "Order Id Is not Exist!"
                         );
                         ob_clean();
                         print json_encode($params);
