@@ -111,6 +111,9 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
 
     // Get the current context
     $context = Context::getContext();
+
+    $countryCode3Map = require 'geidea-country.php';
+
     // Get the customer's billing address
     $billingAddress = new Address($context->cart->id_address_invoice);
     $billing_address_formatted = array(
@@ -118,8 +121,10 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
       'last_name' => $billingAddress->lastname,
       'billing_address' => $billingAddress->address1,
       'city' => $billingAddress->city,
-      'postcode' => $billingAddress->postcode,
+      'postalCode' => $billingAddress->postcode,
       'phone' => $billingAddress->phone,
+      'country' => isset($countryCode3Map[(new Country($billingAddress->id_country))->iso_code]) ? $countryCode3Map[(new Country($billingAddress->id_country))->iso_code] : (new Country($billingAddress->id_country))->iso_code,
+      'street' => $billingAddress->address1,
     );
 
     // Get the customer's shipping address
@@ -129,8 +134,10 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
       'last_name' => $shippingAddress->lastname,
       'billing_address' => $shippingAddress->address1,
       'city' => $shippingAddress->city,
-      'postcode' => $shippingAddress->postcode,
+      'postalCode' => $shippingAddress->postcode,
       'phone' => $shippingAddress->phone,
+      'country' => isset($countryCode3Map[(new Country($shippingAddress->id_country))->iso_code]) ? $countryCode3Map[(new Country($shippingAddress->id_country))->iso_code] : (new Country($shippingAddress->id_country))->iso_code,
+      'street' => $shippingAddress->address1,
     );
 
     $billing_Address = json_encode($billing_address_formatted);
@@ -146,6 +153,21 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
 
 
     $products = $cart->getProducts();
+
+    $orderItems = array();
+    foreach ($products as $product) {
+      $tempItem = array(
+        "merchantItemId" => (string)$product['id_product'],
+        "name" => $product['name'],
+        "description" => $product['name'],
+        "categories" => "categories",
+        "count" => $product['cart_quantity'],
+        "price" => number_format($product['price'], 2, '.', ''),
+        "sku" => $product['reference'] ? (string)$product['reference'] : (string)$product['id_product'],
+      );
+      $orderItems[] = $tempItem;
+    }
+
     $product_ids = array();
     $product_qts = array();
     foreach ($products as $product) {
@@ -175,7 +197,7 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
 
     $returnUrl = 'index.php?controller=order-confirmation&id_cart=' . $cart->id . '&id_module=' . $this->module->id . '&id_order=' . $orderId . '&key=' . $customer->secure_key;
 
-    $paymentObject = $this->getPaymentObject($product_ids, $product_qts, $product_attributes, $orderId, $orderPrice, $publicKey, $returnUrl, $emailEnabled, $billingEmail, $merchantApiPassword, $addressEnabled, $billing_Address, $shipping_Address, $phoneNumber, $phoneEnabled, $receiptEnabled, $headerColor, $hideLogoEnabled, $hppProfile, $merchantLogo, $uploadDir);
+    $paymentObject = $this->getPaymentObject($product_ids, $product_qts, $product_attributes, $orderId, $orderPrice, $publicKey, $returnUrl, $emailEnabled, $billingEmail, $merchantApiPassword, $addressEnabled, $billing_Address, $shipping_Address, $phoneNumber, $phoneEnabled, $receiptEnabled, $headerColor, $hideLogoEnabled, $hppProfile, $merchantLogo, $uploadDir, $orderItems);
 
     PrestaShopLogger::addLog(
       'GeideaPay::initContent::Token request data: ' . var_export($paymentObject, true),
@@ -219,7 +241,7 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
   }
 
 
-  public function getPaymentObject($product_ids, $product_qts, $product_attributes, $orderId, $orderPrice, $publicKey, $returnUrl, $emailEnabled, $billingEmail, $merchantApiPassword, $addressEnabled, $billing_Address, $shipping_Address, $phoneNumber, $phoneEnabled, $receiptEnabled, $headerColor, $hideLogoEnabled, $hppProfile, $merchantLogo, $uploadDir)
+  public function getPaymentObject($product_ids, $product_qts, $product_attributes, $orderId, $orderPrice, $publicKey, $returnUrl, $emailEnabled, $billingEmail, $merchantApiPassword, $addressEnabled, $billing_Address, $shipping_Address, $phoneNumber, $phoneEnabled, $receiptEnabled, $headerColor, $hideLogoEnabled, $hppProfile, $merchantLogo, $uploadDir, $orderItems)
   {
     global $cookie;
     $currency = new CurrencyCore($cookie->id_currency);
@@ -245,7 +267,16 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
     $timestamp =  date("n/d/Y g:i:s A");
     $signature = $this->generateSignature($publicKey, $price, $currency_iso_code, $orderId === '' ? null : $orderId, $merchantApiPassword, $timestamp);
 
-    $getGeideaSession = $this->createSession($publicKey, $merchantApiPassword, $callbackUrl, $price, $currency_iso_code, $timestamp, $orderId, $billingEmail, $phoneNumber, $billing_Address, $shipping_Address, $merchantLogo, $uploadDir, $addressEnabled, $emailEnabled, $phoneEnabled, $receiptEnabled, $hideLogoEnabled, $headerColor, $hppProfile, $signature);
+    $cartOrderSignature = hash_hmac('sha256', $orderId, $merchantApiPassword);
+
+    $finalReturnUrl = $this->context->link->getModuleLink(
+      $this->module->name,
+      'orderreturn',
+      array('cartOrderId' => $orderId, 'cartOrderSignature' => $cartOrderSignature),
+      $this->ssl
+    );
+
+    $getGeideaSession = $this->createSession($publicKey, $merchantApiPassword, $callbackUrl, $price, $currency_iso_code, $timestamp, $orderId, $billingEmail, $phoneNumber, $billing_Address, $shipping_Address, $merchantLogo, $uploadDir, $addressEnabled, $emailEnabled, $phoneEnabled, $receiptEnabled, $hideLogoEnabled, $headerColor, $hppProfile, $signature, $orderItems, $finalReturnUrl);
     $geideaSession =   urlencode($getGeideaSession);
 
     //building body
@@ -285,13 +316,13 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
     $hash = hash_hmac('sha256', $data, $apiPassword, true);
     return base64_encode($hash);
   }
-
-  public function createSession($publicKey, $merchantApiPassword, $callbackUrl, $price, $currency_iso_code, $timestamp, $orderId, $billingEmail, $phoneNumber, $billing_Address, $shipping_Address, $merchantLogo, $uploadDir, $addressEnabled, $emailEnabled, $phoneEnabled, $receiptEnabled, $hideLogoEnabled, $headerColor, $hppProfile, $signature)
+  public function createSession($publicKey, $merchantApiPassword, $callbackUrl, $price, $currency_iso_code, $timestamp, $orderId, $billingEmail, $phoneNumber, $billing_Address, $shipping_Address, $merchantLogo, $uploadDir, $addressEnabled, $emailEnabled, $phoneEnabled, $receiptEnabled, $hideLogoEnabled, $headerColor, $hppProfile, $signature, $orderItems, $finalReturnUrl)
   {
     $iframeConfiguration = array(
       'merchantPublicKey' => $publicKey,
       'apiPassword' =>  $merchantApiPassword,
       'callbackUrl' => $callbackUrl,
+      'returnUrl' => $finalReturnUrl,
       'amount' => number_format($price, 2, '.', ''),
       'currency' => $currency_iso_code,
       'language' => 'en',
@@ -305,7 +336,9 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
         'create' => false,
         'setDefaultMethod' => false,
         'email' => ($billingEmail === '') ? null : $billingEmail,
-        'phoneNumber' => ($phoneNumber === '') ? null : $phoneNumber,
+        'phoneNumber' => ($phoneNumber === '') ? null : ($phoneNumber[0] != '+' ? '+' . $phoneNumber : $phoneNumber),
+        "firstName" => json_decode($billing_Address)->first_name,
+        "lastName" => json_decode($billing_Address)->last_name,
         'address' => array(
           'billing' => json_decode(str_replace('&quot;', '"', $billing_Address), true),
           'shipping' => json_decode(str_replace('&quot;', '"',  $shipping_Address), true),
@@ -329,10 +362,11 @@ class GeideaPayCreditcardModuleFrontController extends ModuleFrontController
       ),
       'order' => array(
         'integrationType' => 'Plugin',
+        'items' => $orderItems,
       ),
       'platform' => array(
         'name' => 'Prestashop',
-        'pluginVersion' => '3.2.1',
+        'pluginVersion' => '3.3.0',
         'partnerId' => 'Mimocodes',
       ),
       'signature' => $signature,

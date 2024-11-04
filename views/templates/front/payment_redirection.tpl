@@ -23,7 +23,7 @@ let chargeRequest = {
   merchantKey : '{$paymentObject['merchantKey']}',
   initiatedBy : 'Internet',
   name : 'PrestaShop',
-  pluginVersion : '3.2.1',
+  pluginVersion : '3.3.0',
   type : 'PrestaShop E-Commerce Platform',
   IntegrationType : 'Plugin',
   partnerId : 'Mimocodes',
